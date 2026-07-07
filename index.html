@@ -1038,7 +1038,7 @@ function photoControl(opts){
       wrap.appendChild(row);
     });
     const add=el('label','photo-addbtn'); add.innerHTML='<span style="font-size:20px;line-height:1">＋</span> Ajouter une photo';
-    const inp=el('input'); inp.type='file'; inp.accept='image/*'; inp.setAttribute('capture','environment'); inp.multiple=true; inp.style.display='none';
+    const inp=el('input'); inp.type='file'; inp.accept='image/*'; inp.multiple=true; inp.style.display='none';
     inp.onchange=async e=>{ for(const file of e.target.files){ const dataUrl=await compressImage(file); opts.add(dataUrl); } queueSave(); draw(); toast('Photo(s) ajoutée(s)'); };
     add.appendChild(inp); wrap.appendChild(add);
   }
