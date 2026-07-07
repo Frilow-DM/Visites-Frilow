@@ -1,0 +1,1167 @@
+<!DOCTYPE html>
+<html lang="fr">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover, maximum-scale=1">
+<meta name="apple-mobile-web-app-capable" content="yes">
+<meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
+<meta name="apple-mobile-web-app-title" content="Visites ECAB">
+<meta name="theme-color" content="#0e5a57">
+<title>Frilow · Visites ECAB</title>
+<style>
+  :root{
+    --bg:#eef1f0; --surface:#ffffff; --ink:#14201e; --muted:#5d6b68;
+    --line:#dde3e1; --accent:#0e5a57; --accent-2:#127c77; --accent-soft:#e3efed;
+    --ok:#1f7a4d; --warn:#b9791f; --crit:#b23b3b; --info:#3a6ea5;
+    --radius:12px; --radius-s:10px;
+    --safe-t:env(safe-area-inset-top,0px); --safe-b:env(safe-area-inset-bottom,0px);
+  }
+  *{box-sizing:border-box;-webkit-tap-highlight-color:transparent}
+  html,body{margin:0;padding:0}
+  body{
+    font-family:-apple-system,BlinkMacSystemFont,"Segoe UI",Roboto,Helvetica,Arial,sans-serif;
+    background:var(--bg); color:var(--ink); font-size:16px; line-height:1.4;
+    -webkit-text-size-adjust:100%;
+  }
+  /* ---------- App chrome ---------- */
+  .topbar{
+    position:sticky; top:0; z-index:30;
+    background:var(--accent); color:#fff;
+    padding:calc(var(--safe-t) + 10px) 16px 10px;
+    display:flex; align-items:center; gap:10px;
+    box-shadow:0 1px 0 rgba(0,0,0,.06);
+  }
+  .topbar .brand{font-weight:700; letter-spacing:.2px; font-size:17px}
+  .topbar .brand span{opacity:.7; font-weight:500}
+  .topbar .spacer{flex:1}
+  .topbar button{
+    background:rgba(255,255,255,.16); color:#fff; border:0; border-radius:9px;
+    height:38px; padding:0 12px; font-size:15px; font-weight:600;
+  }
+  .topbar button:active{background:rgba(255,255,255,.28)}
+  .view{padding:14px 14px calc(96px + var(--safe-b)); max-width:760px; margin:0 auto}
+  .hidden{display:none !important}
+
+  /* ---------- Home / list ---------- */
+  .home-head{display:flex; align-items:baseline; justify-content:space-between; margin:4px 2px 12px}
+  .home-head h1{font-size:22px; margin:0; letter-spacing:-.3px}
+  .home-head .count{color:var(--muted); font-size:14px}
+  .search{width:100%; height:44px; border:1px solid var(--line); border-radius:var(--radius-s);
+    padding:0 12px; font-size:16px; background:var(--surface); margin-bottom:14px}
+  .card{
+    position:relative; cursor:pointer;
+    background:var(--surface); border:1px solid var(--line); border-radius:var(--radius);
+    padding:14px; margin-bottom:12px; display:block; width:100%; text-align:left;
+  }
+  .card:active{background:#fafbfb}
+  .card .row1{display:flex; justify-content:space-between; align-items:flex-start; gap:10px}
+  .card .title{font-weight:700; font-size:16px; margin:0; padding-right:38px}
+  .card .addr{color:var(--muted); font-size:14px; margin:2px 0 0}
+  .tbadges{margin-top:6px; display:flex; gap:6px; flex-wrap:wrap}
+  .tbadge{display:inline-block; font-size:11px; font-weight:700; letter-spacing:.2px;
+    padding:3px 9px; border-radius:99px; background:var(--accent-soft); color:var(--accent)}
+  .tbadge.none{background:#f0ece3; color:#9a8b6a}
+  .card .meta{color:var(--muted); font-size:13px; margin-top:8px; display:flex; gap:14px; flex-wrap:wrap}
+  .card-del{position:absolute; top:10px; right:10px; width:34px; height:34px; border-radius:8px;
+    border:1px solid var(--line); background:#fff; color:var(--crit); font-size:15px;
+    display:flex; align-items:center; justify-content:center; z-index:2}
+  .card-del:active{background:#f9eaea}
+  .progress{height:6px; border-radius:99px; background:#e7eceb; overflow:hidden; margin-top:10px}
+  .progress > i{display:block; height:100%; background:var(--accent-2)}
+  .pill{display:inline-block; font-size:12px; font-weight:700; padding:3px 8px; border-radius:99px}
+  .pill.ok{background:#e4f1ea; color:var(--ok)}
+  .pill.warn{background:#f6ecda; color:var(--warn)}
+  .pill.crit{background:#f4e1e1; color:var(--crit)}
+  .pill.info{background:#e5edf5; color:var(--info)}
+  .empty{text-align:center; color:var(--muted); padding:48px 20px}
+  .empty svg{opacity:.5; margin-bottom:10px}
+
+  /* ---------- Editor ---------- */
+  .ed-head{
+    position:sticky; top:0; z-index:20; background:var(--bg);
+    padding:6px 0 8px; margin:-2px 0 6px;
+  }
+  .ed-title{font-size:18px; font-weight:700; margin:0 0 2px}
+  .ed-sub{color:var(--muted); font-size:13px}
+  .saved{color:var(--ok); font-size:12px; font-weight:600}
+  .saved.dim{color:var(--muted); font-weight:500}
+
+  details.section{
+    background:var(--surface); border:1px solid var(--line); border-radius:var(--radius);
+    margin-bottom:12px; overflow:visible;
+  }
+  details.section > summary{
+    list-style:none; cursor:pointer; padding:14px;
+    display:flex; align-items:center; gap:10px; font-weight:700;
+  }
+  details.section > summary::-webkit-details-marker{display:none}
+  .sec-chev{margin-left:auto; transition:transform .15s; color:var(--muted)}
+  details[open] .sec-chev{transform:rotate(90deg)}
+  .sec-badge{font-size:12px; color:var(--muted); font-weight:600}
+  .mod-badge{font-size:10px; font-weight:800; letter-spacing:.4px; padding:2px 7px; border-radius:99px; text-transform:uppercase; flex:none}
+  .mod-badges{display:flex; gap:4px; flex:none}
+  .sec-ttl{min-width:0}
+  .sec-body{padding:0 14px 14px}
+
+  .field{margin-bottom:12px}
+  .field:last-child{margin-bottom:0}
+  .field label{display:block; font-size:13px; font-weight:600; color:var(--muted); margin-bottom:5px}
+  .field input, .field textarea, .field select{
+    width:100%; border:1px solid var(--line); border-radius:var(--radius-s);
+    padding:11px 12px; font-size:16px; background:#fff; color:var(--ink); font-family:inherit;
+  }
+  .field textarea{min-height:80px; resize:vertical}
+  .field input:focus, .field textarea:focus, .field select:focus{
+    outline:none; border-color:var(--accent-2); box-shadow:0 0 0 3px var(--accent-soft);
+  }
+  input::placeholder, textarea::placeholder{font-style:italic; color:#9aa6a3; opacity:1}
+  .field-num{display:flex; gap:8px}
+  .field-num input{flex:1}
+  .field-num .unit{width:96px; flex:none}
+  .field-num input[readonly].unit{background:#f4f6f5; color:var(--muted); text-align:center}
+  .field input.computed{background:#eef3f2; color:var(--accent); font-weight:700}
+  .gps-row{display:flex; gap:8px; align-items:flex-end}
+  .gps-row .field{flex:1; margin:0}
+  .btn-gps{height:46px; border:1px solid var(--accent); color:var(--accent); background:var(--accent-soft);
+    border-radius:var(--radius-s); padding:0 14px; font-weight:600; font-size:14px; white-space:nowrap}
+
+  /* repeaters */
+  .rep-item{border:1px solid var(--line); border-radius:var(--radius-s); padding:12px; margin-bottom:10px; background:#fbfcfc}
+  .rep-item .rep-top{display:flex; justify-content:space-between; align-items:center; margin-bottom:8px}
+  .rep-item .rep-top b{font-size:14px}
+  .icon-btn{border:0; background:transparent; color:var(--crit); font-size:14px; font-weight:600; padding:4px 6px}
+  .grav-row{display:flex; gap:6px; margin-top:6px; flex-wrap:wrap}
+  .grav-row .g{flex:1; min-width:64px; text-align:center; border:1px solid var(--line); border-radius:8px;
+    padding:8px 4px; font-size:13px; font-weight:600; color:var(--muted); background:#fff}
+  .grav-row .g.sel[data-g="info"]{background:#e5edf5; color:var(--info); border-color:#c5d6ea}
+  .grav-row .g.sel[data-g="mineur"]{background:#e4f1ea; color:var(--ok); border-color:#bfe0cd}
+  .grav-row .g.sel[data-g="majeur"]{background:#f6ecda; color:var(--warn); border-color:#e7cf9f}
+  .grav-row .g.sel[data-g="critique"]{background:#f4e1e1; color:var(--crit); border-color:#e6bcbc}
+  .add-btn{width:100%; border:1px dashed var(--accent-2); color:var(--accent); background:#fff;
+    border-radius:var(--radius-s); padding:12px; font-weight:600; font-size:15px}
+  .add-btn:active{background:var(--accent-soft)}
+
+  /* photos */
+  .photo-grid{display:grid; grid-template-columns:repeat(3,1fr); gap:8px; margin-top:4px}
+  .photo-thumb{position:relative; aspect-ratio:1; border-radius:var(--radius-s); overflow:hidden; border:1px solid var(--line); background:#f0f2f1}
+  .photo-thumb img{width:100%; height:100%; object-fit:cover; display:block}
+  .photo-thumb .del{position:absolute; top:4px; right:4px; width:26px; height:26px; border-radius:99px;
+    border:0; background:rgba(20,32,30,.62); color:#fff; font-size:15px; line-height:1; display:flex; align-items:center; justify-content:center}
+  .photo-add{display:flex; flex-direction:column; align-items:center; justify-content:center; gap:4px;
+    aspect-ratio:1; border:1px dashed var(--accent-2); border-radius:var(--radius-s); color:var(--accent);
+    font-size:13px; font-weight:600; background:var(--accent-soft)}
+  .photo-add input{display:none}
+
+  /* galerie photo avec légende */
+  .photo-list{display:flex; flex-direction:column; gap:8px}
+  .photo-row{display:flex; gap:10px; align-items:center; border:1px solid var(--line);
+    border-radius:var(--radius-s); padding:8px; background:#fbfcfc}
+  .photo-row img{width:60px; height:60px; object-fit:cover; border-radius:8px; flex:none; background:#eef1f0}
+  .photo-mid{flex:1; min-width:0; display:flex; flex-direction:column; gap:6px}
+  .photo-row .ori{height:38px; border:1px solid var(--line); border-radius:8px; padding:0 8px; font-size:14px; background:#fff; font-family:inherit; color:var(--accent); font-weight:600}
+  .photo-row .cap{flex:1; min-width:0; height:42px; border:1px solid var(--line); border-radius:8px;
+    padding:0 10px; font-size:15px; background:#fff; font-family:inherit}
+  .photo-row .del-row{flex:none; width:34px; height:34px; border-radius:8px; border:1px solid var(--line);
+    background:#fff; color:var(--crit); font-size:18px; line-height:1}
+  .photo-row .del-row:active{background:#f9eaea}
+  .photo-addbtn{display:flex; align-items:center; justify-content:center; gap:6px;
+    border:1px dashed var(--accent-2); color:var(--accent); background:var(--accent-soft);
+    border-radius:var(--radius-s); padding:11px; font-weight:600; font-size:15px}
+  .photo-addbtn input{display:none}
+
+  /* répéteur imbriqué (fenêtres dans une pièce) */
+  .rep-item .rep-wrap{margin-top:4px}
+  .rep-item .rep-item{background:#fff}
+
+  /* multi-select chips */
+  .multi-row{display:flex; gap:8px; flex-wrap:wrap}
+  .multi-row .chip{border:1px solid var(--line); border-radius:99px; padding:9px 14px;
+    font-size:14px; font-weight:600; color:var(--muted); background:#fff}
+  .multi-row .chip.sel{background:var(--accent-soft); color:var(--accent); border-color:var(--accent-2)}
+  .multi-row .chip:active{transform:scale(.97)}
+  .subhead{font-size:12px; font-weight:700; color:var(--muted); text-transform:uppercase;
+    letter-spacing:.5px; margin:14px 0 8px; padding-top:10px; border-top:1px solid var(--line)}
+  details .sec-body > .subhead:first-child{margin-top:2px; padding-top:0; border-top:0}
+  .req-star{color:var(--crit); font-weight:700}
+  .field.locked{opacity:.4; pointer-events:none}
+  .photo-note{font-size:13px; line-height:1.35; border-radius:var(--radius-s); padding:9px 11px; margin-bottom:8px; border:1px solid}
+  .photo-note.warn{background:#fbf3e3; border-color:#e7cf9f; color:#7a5410}
+  .photo-note.info{background:#eaf1f8; border-color:#c5d6ea; color:#2d567f}
+  .photo-note b{font-weight:700}
+  .miss{font-weight:600}
+  .miss.warn{color:var(--warn); cursor:pointer; text-decoration:underline}
+  .miss.ok{color:var(--ok)}
+
+  /* sélecteur de type(s) de visite */
+  .type-card{background:var(--accent-soft); border:1px solid #cfe2e0; border-radius:var(--radius);
+    padding:14px; margin-bottom:14px}
+  .type-h{font-size:13px; font-weight:700; color:var(--accent); text-transform:uppercase;
+    letter-spacing:.5px; margin-bottom:10px}
+  .type-hint{font-size:13px; color:var(--muted); margin-top:10px; font-style:italic}
+  .type-note{margin-top:10px; font-size:13px; line-height:1.4; background:#fff;
+    border:1px solid #e7cf9f; border-left:4px solid #b9791f; border-radius:8px; padding:9px 11px; color:#7a5410}
+
+  /* sélecteur de type(s) de visite -- chips réutilisent .multi-row/.chip */
+  .type-card .chip{background:#fff}
+  .type-card .chip.sel{background:var(--accent); color:#fff; border-color:var(--accent)}
+
+  /* modal récapitulatif */
+  .modal-overlay{position:fixed; inset:0; z-index:60; background:rgba(20,32,30,.45);
+    display:flex; align-items:flex-end; justify-content:center}
+  .modal{background:#fff; width:100%; max-width:760px; border-radius:16px 16px 0 0;
+    max-height:82vh; display:flex; flex-direction:column; box-shadow:0 -8px 30px rgba(0,0,0,.22)}
+  .modal-h{font-size:17px; font-weight:700; padding:18px 18px 6px}
+  .modal-b{overflow:auto; padding:0 18px 4px}
+  .mg-sec{font-size:12px; font-weight:700; text-transform:uppercase; letter-spacing:.4px; color:var(--muted); margin:12px 0 6px}
+  .mg-item{display:block; width:100%; text-align:left; background:#fbf3e3; border:1px solid #e7cf9f;
+    color:#7a5410; border-radius:10px; padding:11px 12px; margin-bottom:6px; font-size:15px; font-weight:600}
+  .mg-item:active{background:#f6ebd4}
+  .modal-f{display:flex; gap:10px; padding:14px 18px calc(14px + var(--safe-b)); border-top:1px solid var(--line)}
+  .modal-f button{flex:1; height:48px; border-radius:10px; font-size:15px; font-weight:700; border:1px solid var(--line); background:#fff; color:var(--ink)}
+  .modal-f .btn-primary{background:var(--accent); color:#fff; border-color:var(--accent)}
+
+  /* address autocomplete */
+  .addr-box{position:relative}
+  .addr-sug{position:absolute; top:100%; left:0; right:0; z-index:40; background:#fff;
+    border:1px solid var(--line); border-radius:0 0 var(--radius-s) var(--radius-s);
+    box-shadow:0 10px 24px rgba(20,32,30,.14); max-height:280px; overflow:auto; display:none; margin-top:2px}
+  .addr-sug.open{display:block}
+  .addr-opt{padding:11px 12px; font-size:15px; border-bottom:1px solid #eef2f1; cursor:pointer}
+  .addr-opt:last-child{border-bottom:0}
+  .addr-opt:active{background:var(--accent-soft)}
+  .addr-loading{padding:11px 12px; font-size:14px; color:var(--muted); font-style:italic}
+  .coord-hint{font-size:12px; color:var(--accent); margin-top:6px; font-weight:600}
+
+  /* bottom bar */
+  .actionbar{
+    position:fixed; left:0; right:0; bottom:0; z-index:25;
+    background:rgba(255,255,255,.94); backdrop-filter:saturate(1.4) blur(8px);
+    border-top:1px solid var(--line);
+    padding:10px 14px calc(10px + var(--safe-b));
+    display:flex; gap:10px; max-width:760px; margin:0 auto;
+  }
+  .actionbar button{flex:1; height:48px; border-radius:var(--radius-s); font-size:15px; font-weight:700; border:1px solid var(--line); background:#fff; color:var(--ink)}
+  .actionbar button.primary{background:var(--accent); color:#fff; border-color:var(--accent)}
+  .actionbar button.danger{color:var(--crit); border-color:#e6bcbc; flex:none; width:48px; font-size:18px}
+  .fab{position:fixed; right:18px; bottom:calc(20px + var(--safe-b)); z-index:25;
+    height:56px; padding:0 20px; border-radius:99px; border:0; background:var(--accent); color:#fff;
+    font-size:16px; font-weight:700; box-shadow:0 6px 18px rgba(14,90,87,.34); display:flex; align-items:center; gap:8px}
+
+  /* toast */
+  .toast{position:fixed; left:50%; bottom:calc(86px + var(--safe-b)); transform:translateX(-50%);
+    background:var(--ink); color:#fff; padding:10px 16px; border-radius:99px; font-size:14px; z-index:50;
+    opacity:0; transition:opacity .2s; pointer-events:none; max-width:90%}
+  .toast.show{opacity:.95}
+
+  /* print report (screen-hidden) */
+  #printRoot{display:none}
+  @media print{
+    .topbar,.actionbar,.fab,.toast,#homeView,#editorView{display:none !important}
+    body{background:#fff}
+    #printRoot{display:block; padding:0; color:#000; font-size:12px}
+    #printRoot h1{font-size:18px; margin:0 0 2px}
+    #printRoot h2{font-size:13px; border-bottom:1.5px solid #000; padding-bottom:3px; margin:16px 0 8px; text-transform:uppercase; letter-spacing:.5px}
+    #printRoot .pmeta{color:#444; font-size:11px; margin-bottom:8px}
+    #printRoot table{width:100%; border-collapse:collapse; margin:0 0 4px}
+    #printRoot td{padding:3px 6px; vertical-align:top; border-bottom:1px solid #ddd}
+    #printRoot td.k{width:42%; color:#444; font-weight:600}
+    #printRoot .pconstat{border:1px solid #bbb; border-radius:4px; padding:6px 8px; margin-bottom:6px}
+    #printRoot .pimg{display:inline-block; width:31%; margin:1%; vertical-align:top}
+    #printRoot .pimg img{width:100%; border:1px solid #ccc}
+    #printRoot .pimg span{font-size:10px; color:#444}
+  }
+</style>
+</head>
+<body>
+
+<div class="topbar">
+  <div class="brand">Frilow <span>· Visites ECAB</span></div>
+  <div class="spacer"></div>
+  <button id="backBtn" class="hidden">‹ Liste</button>
+</div>
+
+<!-- ============ HOME ============ -->
+<div id="homeView" class="view">
+  <div class="home-head">
+    <h1>Mes visites</h1>
+    <div class="count" id="homeCount"></div>
+  </div>
+  <input id="searchInput" class="search" type="search" placeholder="Rechercher (adresse, propriétaire, type…)">
+  <div id="cardList"></div>
+  <div id="emptyState" class="empty hidden">
+    <svg width="48" height="48" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.6"><path d="M3 7l9-4 9 4v10l-9 4-9-4z"/><path d="M3 7l9 4 9-4M12 11v10"/></svg>
+    <div>Aucune visite enregistrée.<br>Touchez « Nouvelle visite » pour commencer.</div>
+  </div>
+</div>
+<button id="newBtn" class="fab">＋ Nouvelle visite</button>
+
+<!-- ============ EDITOR ============ -->
+<div id="editorView" class="view hidden">
+  <div class="ed-head">
+    <div class="ed-title" id="edTitle">Nouvelle visite</div>
+    <div class="ed-sub"><span id="edSub">—</span> · <span id="saveState" class="saved dim">non enregistré</span> · <span id="missingInd" class="miss"></span></div>
+  </div>
+  <div id="sections"></div>
+</div>
+<div id="editorBar" class="actionbar hidden">
+  <button class="danger" id="deleteBtn" title="Supprimer">🗑</button>
+  <button id="jsonBtn">Export JSON</button>
+  <button class="primary" id="pdfBtn">Exporter PDF</button>
+</div>
+
+<div id="toast" class="toast"></div>
+<div id="printRoot"></div>
+
+<script>
+"use strict";
+/* ============================================================
+   Frilow · Visites ECAB — prototype hors-ligne (v1)
+   Stockage local (IndexedDB) · photos · mesures · constats · export
+   ============================================================ */
+
+/* ---------- Schéma de la fiche (À CORRIGER avec Daniel) ----------
+   Types de champ: text | textarea | number(+unit) | date | select | multi | choice | address | photo | subheader
+   Options: req:true (champ obligatoire, *) · ph:'…' (exemple) · groupe:'…' (clé de regroupement des photos)
+*/
+/* Jeu de champs « fenêtre » réutilisé (dans les pièces et dans la section Fenêtres) */
+const FENETRE_SUB = [
+  { k:'orientation', label:'Orientation', type:'multi', opts:['N','NE','E','SE','S','SO','O','NO'] },
+  { k:'cadre', label:'Type de cadre', type:'select', opts:['Bois/métal','Bois','PVC','Métal','Autre'] },
+  { k:'cadreAutre', label:'Préciser le cadre', type:'text', showWhen:{k:'cadre',eq:'Autre'} },
+  { k:'vitrage', label:'Type de vitrage', type:'select', opts:['Simple doublé','Simple apposé','Simple','Double','Triple','Autre'] },
+  { k:'vitrageAutre', label:'Préciser le vitrage', type:'text', showWhen:{k:'vitrage',eq:'Autre'} },
+  { k:'largeurFen', label:'Largeur', type:'number', unit:'cm' },
+  { k:'hauteurFen', label:'Hauteur', type:'number', unit:'cm' },
+  { k:'surfaceFen', label:'Surface', type:'computed', unit:'m²',
+    compute:(it)=>{ const L=parseFloat(String(it.largeurFen).replace(',','.')), H=parseFloat(String(it.hauteurFen).replace(',','.')); return (isFinite(L)&&isFinite(H))? ((L*H)/10000).toFixed(2):''; } },
+  { k:'remarqueFenetre', label:'Remarque (fenêtre)', type:'textarea', ph:'ex. La fenêtre n’est pas parfaitement étanche' },
+  { k:'photos', label:'Photos de la fenêtre', type:'photo' },
+];
+
+const RENOV_SUB = [
+  { k:'type',  label:'Type de rénovation', type:'text', ph:'ex. Remplacement des fenêtres, Isolation toiture…' },
+  { k:'annee', label:'Année', type:'number' },
+];
+
+const SECTIONS = [
+  /* ——— Administratif & identification ——— */
+  { id:'dossier', module:'commun', types:['*'], titre:'Dossier & intervenant', fields:[
+    { k:'adresse',      label:'Adresse', type:'address', ph:'commencez à taper l’adresse…', req:true },
+    { k:'dateVisite',   label:'Date de la visite', type:'date', req:true },
+    { k:'collaborateur',label:'Collaborateur', type:'select', req:true,
+      opts:['Anthony Guerry','Valentin Dougoud','Daniel Gachoud','Moreno Mazzucchi'] },
+  ]},
+  { id:'batiment', module:'commun', types:['*'], titre:'Identification du bâtiment', fields:[
+    { k:'designation', label:'Affectation', type:'multi',
+      opts:['Immeuble collectif','Maison individuelle','Commerce','Restaurant','Administratif','Autre'] },
+    { k:'designationAutre', label:'Préciser l’affectation', type:'text', showWhen:{k:'designation',includes:'Autre'} },
+    { k:'description', label:'Description du bâtiment', type:'textarea', ph:'Immeuble collectif avec un commerce au rez-de-chaussée' },
+    { k:'anneeConstruction', label:'Année de construction', type:'number' },
+    { k:'proprietaire',label:'Propriétaire ou régie', type:'text' },
+    { k:'presents',    label:'Personnes présentes pendant la visite', type:'text', autofill:'collaborateur', ph:'ajoutez d’autres personnes présentes…' },
+    { k:'remarquesVisite', label:'Remarques sur la visite', type:'textarea', ph:'La gérance m’a donné les clés et j’ai effectué la visite seul' },
+  ]},
+
+  /* ——— Rénovations (CECB / CECB+ / CI) ——— */
+  { id:'renovations', module:'cecb', types:['cecb','cecbp','ci'], titre:'Rénovations effectuées', fields:[
+    { k:'renovations', label:'Rénovations', type:'repeater', itemLabel:'Rénovation', sub:RENOV_SUB },
+  ]},
+
+  /* ——— Occupation ——— */
+  { id:'utilisation', module:'ecab', types:['ecab'], titre:'Utilisation', fields:[
+    { k:'appartements', label:'Appartements', type:'number' },
+    { k:'niveauxHS',    label:'Niveaux hors-sol', type:'number' },
+    { k:'niveauxSS',    label:'Niveaux en sous-sol', type:'number' },
+    { k:'usageSousSol', label:'Utilisation du sous-sol', type:'multi',
+      opts:['Local de chauffage','Parking','Abri PC','Commerce','Place de travail','Cave','Citerne','Pompe à chaleur'] },
+    { k:'cagesEscalier',label:'Cages d’escalier', type:'number' },
+    { k:'photosCage',   label:'Photo(s) cage d’escalier', type:'photo', groupe:'cage', req:true },
+  ]},
+
+  /* ——— Tour extérieur ——— */
+  { id:'facades', module:'commun', types:['ecab','cecb','cecbp'], titre:'Photos des façades', fields:[
+    { k:'photosFacades', label:'Photos des façades', type:'photo', groupe:'facades', req:true, orientation:true,
+      noteType:'warn', note:'Photographiez l’ensemble des façades du bâtiment. Pour l’ECAB, veillez à ce que tous les stores soient visibles.' },
+  ]},
+  { id:'situation', module:'ecab', types:['ecab'], titre:'Photos de la situation', fields:[
+    { k:'photosSituation', label:'Photos de la situation du bâtiment', type:'photo', groupe:'situation', req:true,
+      noteType:'info', note:'Photographiez l’environnement et les abords immédiats du bâtiment.' },
+  ]},
+  { id:'elementsExt', module:'cecb', types:['cecb','cecbp'], titre:'Éléments extérieurs & enveloppe', fields:[
+    { k:'elementsExt', label:'Éléments extérieurs', type:'repeater', itemLabel:'Élément',
+      sub:[
+        { k:'designation', label:'Désignation', type:'text' },
+        { k:'remarque', label:'Remarque', type:'textarea' },
+        { k:'photos', label:'Photos', type:'photo' },
+      ] },
+  ]},
+  { id:'stores', module:'ecab', types:['ecab'], titre:'Stores & commande', fields:[
+    { k:'nbStores',   label:'Nombre de stores', type:'number', controlsLock:true },
+    { k:'typeStores', label:'Type de stores', type:'multi', opts:['Manuel','Électrique'], lockKey:'nbStores' },
+    { k:'domotique',  label:'Commande centrale ou domotique', type:'choice', opts:['Oui','Non'], lockKey:'nbStores' },
+  ]},
+  { id:'ouverture', module:'ecab', types:['ecab'], titre:'Ouverture du bâtiment', fields:[
+    { type:'subheader', label:'Rez-de-chaussée et sous-sol' },
+    { k:'portesExt',      label:'Portes extérieures', type:'number', req:true },
+    { k:'photosPortesExt', label:'Photos des portes extérieures', type:'photo', groupe:'ouvPortesExt', showWhen:{k:'portesExt',gte:1} },
+    { k:'entreesParking', label:'Entrées de parking sous-sol', type:'number', req:true },
+    { k:'photosParking',  label:'Photos des entrées de parking', type:'photo', groupe:'ouvParking', showWhen:{k:'entreesParking',gte:1} },
+    { k:'sautsDeLoup',    label:'Saut-de-loups', type:'number', req:true },
+    { k:'photosSautsLoup', label:'Photos des saut-de-loups', type:'photo', groupe:'ouvSautsLoup', showWhen:{k:'sautsDeLoup',gte:1} },
+    { k:'escaliersSS',    label:'Escaliers menant au sous-sol', type:'number', req:true },
+    { k:'photosEscaliers', label:'Photos des escaliers', type:'photo', groupe:'ouvEscaliers', showWhen:{k:'escaliersSS',gte:1} },
+    { k:'entreesAbriPC',  label:'Entrées d’abris PC', type:'number', req:true },
+    { k:'photosAbriPC',   label:'Photos des entrées d’abris PC', type:'photo', groupe:'ouvAbriPC', showWhen:{k:'entreesAbriPC',gte:1} },
+    { k:'ouvVentilation', label:'Ouvertures de ventilation', type:'number', req:true },
+    { k:'photosVentilation', label:'Photos des ouvertures de ventilation', type:'photo', groupe:'ouvVentilation', showWhen:{k:'ouvVentilation',gte:1} },
+    { type:'subheader', label:'Toiture' },
+    { k:'coupolesSynth',   label:'Coupoles synthétiques', type:'number', req:true },
+    { k:'photosCoupSynth', label:'Photos des coupoles synthétiques', type:'photo', groupe:'ouvCoupSynth', showWhen:{k:'coupolesSynth',gte:1} },
+    { k:'coupolesVerre',   label:'Coupoles verres', type:'number', req:true },
+    { k:'photosCoupVerre', label:'Photos des coupoles verres', type:'photo', groupe:'ouvCoupVerre', showWhen:{k:'coupolesVerre',gte:1} },
+    { k:'fenetresToiture', label:'Fenêtres de toiture (velux)', type:'number', req:true },
+    { k:'photosFenToiture', label:'Photos des fenêtres de toiture', type:'photo', groupe:'ouvFenToiture', showWhen:{k:'fenetresToiture',gte:1} },
+  ]},
+
+  /* ——— Documents & technique ——— */
+  { id:'cecbDocs', module:'cecb', types:['cecb','cecbp'], titre:'Plans & consommations', fields:[
+    { k:'photosPlans', label:'Photos des plans', type:'photo', groupe:'plans' },
+    { k:'photosConso', label:'Photos des consommations', type:'photo', groupe:'conso' },
+    { k:'consoTexte',  label:'Consommations (saisie manuelle)', type:'textarea', ph:'ex. mazout 2023 : 3200 L · électricité : 8500 kWh…' },
+  ]},
+  { id:'tech', module:'cecb', types:['cecb','cecbp','ci'], titre:'Technique du bâtiment', fields:[
+    { type:'subheader', label:'Producteur de chaleur' },
+    { k:'pcAnnee', label:'Année du producteur de chaleur', type:'number' },
+    { k:'pcType',  label:'Type de producteur de chaleur', type:'multi',
+      opts:['Mazout','Mazout à condensation','Gaz','Gaz à condensation','Bois automatique','Bois manuel','PAC air/eau','PAC sol/eau','Électricité','Chauffage à distance','Autre'] },
+    { k:'pcAutre', label:'Préciser (autre producteur)', type:'text', showWhen:{k:'pcType',includes:'Autre'} },
+    { k:'pcPuissance', label:'Puissance du producteur', type:'number', unit:'kW' },
+    { k:'photosPC',          label:'Photos du producteur de chaleur', type:'photo', groupe:'pc' },
+    { k:'photosPlaquettePC', label:'Photos de la plaquette signalétique', type:'photo', groupe:'plaquettePC' },
+    { type:'subheader', label:'Émission de chaleur' },
+    { k:'emission', label:'Type d’émission de chaleur', type:'multi', opts:['Radiateurs','Chauffage au sol','Autre'] },
+    { k:'emissionAutre', label:'Préciser (autre émission)', type:'text', showWhen:{k:'emission',includes:'Autre'} },
+    { k:'photosEmission', label:'Photos de l’émission de chaleur', type:'photo', groupe:'emissionCecb', showWhen:{k:'emission',filled:true} },
+    { k:'ciTempAller',  label:'Température aller', type:'number', unit:'°C', forTypes:['ci'] },
+    { k:'ciTempRetour', label:'Température retour', type:'number', unit:'°C', forTypes:['ci'] },
+    { k:'ciPhotoLocalTech', label:'Photo du local technique', type:'photo', groupe:'ciLocalTech', forTypes:['ci'] },
+    { type:'subheader', label:'Eau chaude sanitaire (ECS)' },
+    { k:'ecsAnnee', label:'Année', type:'number' },
+    { k:'ecsType',  label:'Distribution', type:'choice', opts:['Centralisé','Décentralisé'] },
+    { k:'ecsProducteur', label:'Type de producteur ECS', type:'text' },
+    { k:'ecsVolume', label:'Volume du ballon ECS', type:'number', unit:'L' },
+    { k:'photosBallon',       label:'Photos du ballon', type:'photo', groupe:'ballon' },
+    { k:'photosPlaquetteECS', label:'Photos de la plaquette ECS', type:'photo', groupe:'plaquetteEcs' },
+    { type:'subheader', label:'Panneaux photovoltaïques', forTypes:['cecb','cecbp'] },
+    { k:'pv',      label:'Panneaux photovoltaïques ?', type:'choice', opts:['Oui','Non'], forTypes:['cecb','cecbp'] },
+    { k:'pvAnnee', label:'Année', type:'number', showWhen:{k:'pv',eq:'Oui'}, forTypes:['cecb','cecbp'] },
+    { k:'pvKwc',   label:'Puissance', type:'number', unit:'kWc', showWhen:{k:'pv',eq:'Oui'}, forTypes:['cecb','cecbp'] },
+    { k:'photosPV',label:'Photos des panneaux PV', type:'photo', groupe:'pv', showWhen:{k:'pv',eq:'Oui'}, forTypes:['cecb','cecbp'] },
+    { type:'subheader', label:'Solaire thermique', forTypes:['cecb','cecbp'] },
+    { k:'st',      label:'Panneaux solaires thermiques ?', type:'choice', opts:['Oui','Non'], forTypes:['cecb','cecbp'] },
+    { k:'stAnnee', label:'Année', type:'number', showWhen:{k:'st',eq:'Oui'}, forTypes:['cecb','cecbp'] },
+    { k:'photosST',label:'Photos des panneaux solaires thermiques', type:'photo', groupe:'st', showWhen:{k:'st',eq:'Oui'}, forTypes:['cecb','cecbp'] },
+    { type:'subheader', label:'Stockage pellets (si proposé)', forTypes:['ci'] },
+    { k:'ciPellets', label:'Chauffage à pellets proposé ?', type:'choice', opts:['Oui','Non'], forTypes:['ci'] },
+    { k:'ciPelletLong', label:'Longueur du local', type:'number', unit:'m', showWhen:{k:'ciPellets',eq:'Oui'}, forTypes:['ci'] },
+    { k:'ciPelletLarg', label:'Largeur du local', type:'number', unit:'m', showWhen:{k:'ciPellets',eq:'Oui'}, forTypes:['ci'] },
+    { k:'ciPelletHaut', label:'Hauteur du local', type:'number', unit:'m', showWhen:{k:'ciPellets',eq:'Oui'}, forTypes:['ci'] },
+    { k:'ciPelletVol', label:'Volume du local', type:'computed', unit:'m³', showWhen:{k:'ciPellets',eq:'Oui'}, forTypes:['ci'],
+      compute:(d)=>{ const L=parseFloat(String(d.ciPelletLong).replace(',','.')), l=parseFloat(String(d.ciPelletLarg).replace(',','.')), H=parseFloat(String(d.ciPelletHaut).replace(',','.')); return (isFinite(L)&&isFinite(l)&&isFinite(H))? (L*l*H).toFixed(2):''; } },
+    { k:'ciPhotosPellet', label:'Photo du local de stockage pellets', type:'photo', groupe:'ciPellet', showWhen:{k:'ciPellets',eq:'Oui'}, forTypes:['ci'] },
+    { type:'subheader', label:'Consommateurs supplémentaires', forTypes:['cecb','cecbp'] },
+    { k:'consoSupp', label:'Consommateurs supplémentaires', type:'repeater', itemLabel:'Consommateur', forTypes:['cecb','cecbp'],
+      sub:[
+        { k:'designation', label:'Désignation', type:'text', ph:'ex. PAC piscine, borne de recharge…' },
+        { k:'remarque', label:'Remarque', type:'textarea' },
+        { k:'photos', label:'Photos', type:'photo' },
+      ] },
+  ]},
+
+  /* ——— Tour intérieur ——— */
+  { id:'cecbReleves', module:'cecb', types:['cecb','cecbp'], titre:'Relevés des pièces', fields:[
+    { k:'cotesSurPlan', label:'Côtes des fenêtres disponibles sur plan', type:'choice', opts:['Oui','Non'] },
+    { k:'releves', label:'Relevés pièce par pièce', type:'repeater', itemLabel:'Local',
+      sub:[
+        { k:'niveau', label:'Niveau', type:'select', opts:['Sous-sol','Rez-de-chaussée','1ᵉʳ étage','2ᵉ étage','3ᵉ étage','4ᵉ étage','Combles','Toiture','Autre'] },
+        { k:'piece',  label:'Pièce / local', type:'text', ph:'ex. Salon, Chambre 1, Cuisine…' },
+        { k:'remarquePiece', label:'Remarque (pièce / mur)', type:'textarea', ph:'ex. Le mur nord est en partie enterré' },
+        { k:'photos', label:'Photos de la pièce', type:'photo' },
+        { k:'fenetres', label:'Fenêtres de la pièce', type:'repeater', itemLabel:'Fenêtre', sub:FENETRE_SUB },
+      ] },
+  ]},
+  { id:'cecbFenetres', module:'cecb', types:['cecb','cecbp'], titre:'Fenêtres', fields:[
+    { k:'fenetresLibres', label:'Fenêtres (sans pièce attribuée)', type:'repeater', itemLabel:'Fenêtre', sub:FENETRE_SUB },
+  ]},
+];
+
+/* Types de visite cochables (CECB et CECB+ partagent le même module) */
+const TYPES = [
+  { k:'cecb',  label:'CECB',              module:'cecb' },
+  { k:'cecbp', label:'CECB+',             module:'cecb' },
+  { k:'ci',    label:'Conseil incitatif', module:'ci' },
+  { k:'ecab',  label:'ECAB',              module:'ecab' },
+];
+function activeSections(v){
+  return SECTIONS.filter(s=> s.types.includes('*') || s.types.some(t=>(v.types||[]).includes(t)) );
+}
+function ensureTypes(v){ if(!Array.isArray(v.types)){ v.types=(v.data && Object.keys(v.data).length)?['ecab']:[]; } return v; }
+
+/* Couleur et badge par module (repérage visuel des sections) */
+const MODULE_STYLE = {
+  commun: { label:'Commun', color:'#5d6b68', soft:'#e9edec' },
+  ecab:   { label:'ECAB',   color:'#0e5a57', soft:'#e3efed' },
+  cecb:   { label:'CECB',   color:'#2f5ca6', soft:'#e6ecf6' },
+  ci:     { label:'CI',     color:'#8a3f63', soft:'#f3e6ee' },
+};
+function sectionModule(sec){ return (sec && sec.module) || 'commun'; }
+/* Badges à afficher pour une section : « Commun » si partout, sinon un badge par type concerné (coché), dédupliqué par couleur de module */
+function sectionBadges(sec){
+  if(sec.types.includes('*')) return [MODULE_STYLE.commun];
+  const seen=new Set(), out=[];
+  sec.types.forEach(tk=>{
+    if(!(current.types||[]).includes(tk)) return;
+    const t=TYPES.find(x=>x.k===tk); if(!t) return;
+    if(seen.has(t.module)) return; seen.add(t.module);
+    out.push(MODULE_STYLE[t.module]);
+  });
+  if(!out.length) out.push(MODULE_STYLE[sec.module]||MODULE_STYLE.commun);
+  return out;
+}
+function typeStyle(tk){ const t=TYPES.find(x=>x.k===tk); return (t && MODULE_STYLE[t.module]) || MODULE_STYLE.commun; }
+
+/* ---------- IndexedDB minimal ---------- */
+const DB_NAME='frilow_ecab', STORE='visites';
+let _db=null;
+function db(){
+  return new Promise((res,rej)=>{
+    if(_db) return res(_db);
+    const r=indexedDB.open(DB_NAME,1);
+    r.onupgradeneeded=e=>{ const d=e.target.result; if(!d.objectStoreNames.contains(STORE)) d.createObjectStore(STORE,{keyPath:'id'}); };
+    r.onsuccess=e=>{ _db=e.target.result; res(_db); };
+    r.onerror=e=>rej(e.target.error);
+  });
+}
+async function dbAll(){ const d=await db(); return new Promise((res,rej)=>{ const out=[]; const c=d.transaction(STORE).objectStore(STORE).openCursor(); c.onsuccess=e=>{const cur=e.target.result; if(cur){out.push(ensureTypes(cur.value));cur.continue();} else res(out);}; c.onerror=e=>rej(e.target.error); }); }
+async function dbPut(v){ const d=await db(); return new Promise((res,rej)=>{ const t=d.transaction(STORE,'readwrite'); t.objectStore(STORE).put(v); t.oncomplete=()=>res(); t.onerror=e=>rej(e.target.error); }); }
+async function dbDel(id){ const d=await db(); return new Promise((res,rej)=>{ const t=d.transaction(STORE,'readwrite'); t.objectStore(STORE).delete(id); t.oncomplete=()=>res(); t.onerror=e=>rej(e.target.error); }); }
+
+/* ---------- État ---------- */
+let current=null;        // visite en cours d'édition
+let saveTimer=null;
+const $=s=>document.querySelector(s);
+const el=(t,c)=>{const e=document.createElement(t); if(c)e.className=c; return e;};
+const uid=()=>Date.now().toString(36)+Math.random().toString(36).slice(2,7);
+
+const NONINPUT=new Set(['photo','subheader']);
+const isInput=f=>f.k && !NONINPUT.has(f.type);
+const isFilled=v=>Array.isArray(v)? v.length>0 : (v!=null && String(v).trim()!=='');
+function condMet(f,data){
+  if(!f) return true;
+  if(f.forTypes && !f.forTypes.some(t=>(current&&current.types||[]).includes(t))) return false;
+  if(!f.showWhen) return true;
+  const v=(data||{})[f.showWhen.k];
+  if('eq' in f.showWhen) return v===f.showWhen.eq;
+  if('includes' in f.showWhen) return Array.isArray(v) && v.includes(f.showWhen.includes);
+  if('gte' in f.showWhen){ const n=parseFloat(String(v).replace(',','.')); return isFinite(n) && n>=f.showWhen.gte; }
+  if('filled' in f.showWhen){ return Array.isArray(v)? v.length>0 : (v!==undefined && v!==null && String(v).trim()!==''); }
+  return true;
+}
+
+function newVisit(){
+  return { id:uid(), createdAt:Date.now(), updatedAt:Date.now(),
+    types:[], data:{}, photos:[] };
+}
+
+/* ---------- Navigation ---------- */
+function showHome(){
+  $('#homeView').classList.remove('hidden'); $('#newBtn').classList.remove('hidden');
+  $('#editorView').classList.add('hidden'); $('#editorBar').classList.add('hidden');
+  $('#backBtn').classList.add('hidden');
+  current=null; renderHome();
+}
+function showEditor(v){
+  current=v;
+  $('#homeView').classList.add('hidden'); $('#newBtn').classList.add('hidden');
+  $('#editorView').classList.remove('hidden'); $('#editorBar').classList.remove('hidden');
+  $('#backBtn').classList.remove('hidden');
+  renderEditor();
+  window.scrollTo(0,0);
+}
+
+/* ---------- Complétude ---------- */
+function completion(v){
+  let total=0, done=0;
+  activeSections(v).forEach(sec=>{
+    if(sec.fields){ sec.fields.forEach(f=>{ if(!isInput(f)||!condMet(f,v.data)) return; total++; if(isFilled(v.data[f.k])) done++; }); }
+  });
+  return total? Math.round(done/total*100):0;
+}
+
+
+/* ---------- Home render ---------- */
+let allVisits=[];
+async function renderHome(){
+  allVisits=(await dbAll()).sort((a,b)=>b.updatedAt-a.updatedAt);
+  applyFilter();
+}
+function applyFilter(){
+  const q=$('#searchInput').value.trim().toLowerCase();
+  const list=allVisits.filter(v=>{
+    if(!q) return true;
+    const hay=[v.data.adresse,v.data.proprietaire,v.data.description,(v.data.designation||[]).join(' ')].join(' ').toLowerCase();
+    return hay.includes(q);
+  });
+  const wrap=$('#cardList'); wrap.innerHTML='';
+  $('#homeCount').textContent=allVisits.length? `${allVisits.length} dossier${allVisits.length>1?'s':''}`:'';
+  $('#emptyState').classList.toggle('hidden', allVisits.length>0);
+  list.forEach(v=>{
+    const c=el('div','card'); c.setAttribute('role','button'); c.tabIndex=0; c.onclick=()=>showEditor(v);
+    const title=v.data.adresse || 'Visite sans titre';
+    const pct=completion(v);
+    const d=v.data.dateVisite? new Date(v.data.dateVisite).toLocaleDateString('fr-CH'):'—';
+    const tbadges=(v.types||[]).map(tk=>{ const t=TYPES.find(x=>x.k===tk); if(!t) return ''; const st=typeStyle(tk); return `<span class="tbadge" style="background:${st.soft};color:${st.color}">${esc(t.label)}</span>`; }).join('') || '<span class="tbadge none">Type non défini</span>';
+    c.innerHTML=`
+      <div class="row1">
+        <div>
+          <p class="title">${esc(title)}</p>
+          <div class="tbadges">${tbadges}</div>
+        </div>
+      </div>
+      <div class="meta">
+        <span>📅 ${d}</span>
+        <span>📷 ${v.photos.length}</span>
+        <span>${pct}% complété</span>
+      </div>
+      <div class="progress"><i style="width:${pct}%"></i></div>`;
+    const del=el('button','card-del'); del.textContent='🗑'; del.setAttribute('aria-label','Supprimer la visite');
+    del.onclick=e=>{ e.stopPropagation(); confirmDelete(v); };
+    c.appendChild(del);
+    wrap.appendChild(c);
+  });
+}
+function confirmDelete(v){
+  const t=v.data.adresse||'cette visite';
+  if(confirm(`Supprimer définitivement « ${t} » ?\nCette action est irréversible.`)){
+    dbDel(v.id).then(()=>{ toast('Visite supprimée'); renderHome(); });
+  }
+}
+
+/* ---------- Editor render ---------- */
+function renderEditor(){
+  const t=current.data.adresse || 'Nouvelle visite';
+  $('#edTitle').textContent=t;
+  $('#edSub').textContent=current.data.dateVisite? new Date(current.data.dateVisite).toLocaleDateString('fr-CH'):'date à définir';
+  const cont=$('#sections'); cont.innerHTML='';
+  cont.appendChild(renderTypeSelector());
+  activeSections(current).forEach((sec,i)=>{
+    const d=el('details','section'); d.id='sec-'+sec.id; if(i===0) d.open=true;
+    const badges=sectionBadges(sec);
+    d.style.boxShadow='inset 4px 0 0 '+(badges.length===1? badges[0].color : MODULE_STYLE.commun.color);
+    const badgeHtml=badges.map(bs=>`<span class="mod-badge" style="background:${bs.soft};color:${bs.color}">${esc(bs.label)}</span>`).join('');
+    const sum=el('summary');
+    sum.innerHTML=`<span class="mod-badges">${badgeHtml}</span><span class="sec-ttl">${esc(sec.titre)}</span><span class="sec-badge" data-badge="${sec.id}"></span><span class="sec-chev">›</span>`;
+    d.appendChild(sum);
+    const body=el('div','sec-body');
+    sec.fields.forEach(f=>{ if(f.forTypes && !f.forTypes.some(t=>(current.types||[]).includes(t))) return; body.appendChild(renderField(f)); });
+    d.appendChild(body);
+    cont.appendChild(d);
+    updateBadge(sec);
+  });
+  applyLocks();
+  applyConditionals();
+  applyComputed();
+  updateMissingIndicator();
+}
+function renderTypeSelector(){
+  const card=el('div','type-card');
+  const h=el('div','type-h'); h.textContent='Type(s) de visite'; card.appendChild(h);
+  const row=el('div','multi-row');
+  TYPES.forEach(t=>{
+    const c=el('button','chip'); c.type='button'; c.textContent=t.label;
+    const st=typeStyle(t.k);
+    if((current.types||[]).includes(t.k)){ c.classList.add('sel'); c.style.background=st.color; c.style.color='#fff'; c.style.borderColor=st.color; }
+    c.onclick=()=>{
+      let arr=Array.isArray(current.types)?current.types.slice():[];
+      const has=arr.includes(t.k);
+      if(has && t.k==='ecab' && isFR() && arr.some(x=>CECB_CI.includes(x))){ toast('ECAB est obligatoire dans le canton de Fribourg'); return; }
+      if(has) arr=arr.filter(x=>x!==t.k); else arr.push(t.k);
+      current.types=arr;
+      if(isFR() && arr.some(x=>CECB_CI.includes(x)) && !arr.includes('ecab')){ arr.push('ecab'); current.types=arr; toast('Canton de Fribourg : visite ECAB ajoutée (obligatoire)'); }
+      queueSave(); renderEditor();
+    };
+    row.appendChild(c);
+  });
+  card.appendChild(row);
+  if(fribourgRuleApplies()){
+    const note=el('div','type-note');
+    note.innerHTML='📌 <b>Canton de Fribourg.</b> Le rapport ECAB est obligatoire pour un CECB/CECB+ ou un Conseil incitatif — la visite ECAB est ajoutée automatiquement.';
+    card.appendChild(note);
+  }
+  if(!(current.types||[]).length){ const hint=el('div','type-hint'); hint.textContent='Sélectionnez au moins un type pour afficher les sections correspondantes.'; card.appendChild(hint); }
+  return card;
+}
+function updateBadge(sec){
+  const b=document.querySelector(`[data-badge="${sec.id}"]`); if(!b) return;
+  const inputs=sec.fields.filter(f=>isInput(f)&&condMet(f,current.data));
+  const n=inputs.filter(f=>isFilled(current.data[f.k])).length;
+  b.textContent=inputs.length? `${n}/${inputs.length}`:'';
+}
+function syncAutofill(sourceKey, oldVal){
+  const nv=current.data[sourceKey]||'';
+  activeSections(current).forEach(sec=>sec.fields.forEach(f=>{
+    if(f.autofill!==sourceKey) return;
+    const cur=(current.data[f.k]||'').trim();
+    if(cur===''||cur===(oldVal||'').trim()){
+      current.data[f.k]=nv;
+      const inp=document.getElementById('f_'+f.k); if(inp) inp.value=nv;
+      updateBadge(sec);
+    }
+  }));
+  queueSave();
+}
+function applyLocks(){
+  document.querySelectorAll('.field[data-lock-key]').forEach(w=>{
+    const v=current.data[w.dataset.lockKey];
+    const locked=(v!=null && String(v).trim()!=='' && Number(v)===0);
+    w.classList.toggle('locked', locked);
+  });
+}
+function applyConditionals(){
+  activeSections(current).forEach(sec=>sec.fields.forEach(f=>{
+    if(!f.showWhen||!f.k) return;
+    const w=document.getElementById('fw_'+f.k);
+    if(w) w.style.display = condMet(f,current.data)? '' : 'none';
+  }));
+}
+
+/* ---------- Règle cantonale Fribourg : ECAB obligatoire avec CECB/CECB+/CI ---------- */
+function detectCanton(lat,lon){
+  if(lat==null||lon==null) return;
+  const url='https://api3.geo.admin.ch/rest/services/api/MapServer/identify'+
+    '?geometryType=esriGeometryPoint&returnGeometry=false&tolerance=0&imageDisplay=0,0,0&mapExtent=0,0,0,0&sr=4326'+
+    '&layers=all:ch.swisstopo.swissboundaries3d-gemeinde-flaeche.fill&geometry='+encodeURIComponent(lon+','+lat);
+  fetch(url).then(r=>r.json()).then(data=>{
+    const at=((data&&data.results)||[])[0]; const kt=at&&at.attributes&&at.attributes.kanton;
+    if(!kt) return;
+    current.data._canton=kt; queueSave();
+    if(applyFribourgAuto()) toast('Canton de Fribourg : visite ECAB ajoutée (obligatoire)');
+    renderEditor();
+  }).catch(()=>{});
+}
+const CECB_CI=['cecb','cecbp','ci'];
+function isFR(){ return (current.data._canton||'')==='FR'; }
+function fribourgRuleApplies(){ return isFR() && (current.types||[]).some(t=>CECB_CI.includes(t)); }
+function applyFribourgAuto(){
+  if(fribourgRuleApplies() && !(current.types||[]).includes('ecab')){ current.types.push('ecab'); queueSave(); return true; }
+  return false;
+}
+
+/* ---------- Champs obligatoires ---------- */
+function requiredFields(){ const out=[]; activeSections(current).forEach(sec=>sec.fields.forEach(f=>{ if(f.req && condMet(f,current.data)) out.push({sec,f}); })); return out; }
+function missingRequired(){
+  return requiredFields().filter(({f})=>
+    f.type==='photo' ? !current.photos.some(p=>p.groupe===(f.groupe||f.k)) : !isFilled(current.data[f.k])
+  );
+}
+function updateMissingIndicator(){
+  const ind=$('#missingInd'); if(!ind) return;
+  const n=missingRequired().length;
+  if(n){ ind.textContent=`⚠ ${n} obligatoire${n>1?'s':''} manquant${n>1?'s':''}`; ind.className='miss warn'; ind.onclick=()=>showMissingModal(false); }
+  else { ind.textContent='✓ champs obligatoires complets'; ind.className='miss ok'; ind.onclick=null; }
+}
+function closeModal(){ const ov=document.querySelector('.modal-overlay'); if(ov) ov.remove(); }
+function showMissingModal(fromExport){
+  closeModal();
+  const m=missingRequired();
+  const ov=el('div','modal-overlay'); const md=el('div','modal');
+  let html=`<div class="modal-h">${m.length? (m.length+' champ'+(m.length>1?'s':'')+' obligatoire'+(m.length>1?'s':'')+' manquant'+(m.length>1?'s':'')) : 'Tous les champs obligatoires sont remplis ✓'}</div>`;
+  if(m.length){
+    const groups=[];
+    m.forEach(({sec,f})=>{ let g=groups.find(x=>x.sec===sec); if(!g){g={sec,items:[]}; groups.push(g);} g.items.push(f); });
+    html+='<div class="modal-b">';
+    groups.forEach(g=>{
+      html+=`<div class="mg-sec">${esc(g.sec.titre)}</div>`;
+      g.items.forEach(f=>{ html+=`<button class="mg-item" data-sec="${g.sec.id}" data-fk="${esc(f.k)}">⚠ ${esc(f.label)}</button>`; });
+    });
+    html+='</div>';
+  }
+  md.innerHTML=html;
+  const ft=el('div','modal-f');
+  if(m.length && fromExport){
+    const b1=el('button'); b1.textContent='Compléter'; b1.onclick=closeModal;
+    const b2=el('button','btn-primary'); b2.textContent='Exporter quand même'; b2.onclick=()=>{ closeModal(); doExport(); };
+    ft.appendChild(b1); ft.appendChild(b2);
+  } else {
+    const b1=el('button','btn-primary'); b1.textContent='Fermer'; b1.onclick=closeModal;
+    ft.appendChild(b1);
+  }
+  md.appendChild(ft); ov.appendChild(md);
+  ov.onclick=e=>{ if(e.target===ov) closeModal(); };
+  document.body.appendChild(ov);
+  md.querySelectorAll('.mg-item').forEach(it=>{
+    it.onclick=()=>{
+      const secId=it.dataset.sec, fk=it.dataset.fk; closeModal();
+      const det=document.getElementById('sec-'+secId); if(det) det.open=true;
+      setTimeout(()=>{ const t=document.getElementById('fw_'+fk); if(t) t.scrollIntoView({behavior:'smooth',block:'center'}); },70);
+    };
+  });
+}
+
+function renderField(f){
+  if(f.type==='subheader'){ const h=el('div','subhead'); h.textContent=f.label; return h; }
+  const w=el('div','field');
+  if(f.k) w.id='fw_'+f.k;
+  if(f.lockKey) w.dataset.lockKey=f.lockKey;
+  const id='f_'+f.k;
+  const lab=el('label'); lab.setAttribute('for',id);
+  lab.innerHTML=esc(f.label)+(f.req?' <span class="req-star">*</span>':'');
+  w.appendChild(lab);
+  if(f.autofill && isFilled(current.data[f.autofill]) && !isFilled(current.data[f.k])) current.data[f.k]=current.data[f.autofill];
+  const val=current.data[f.k]||'';
+  if(f.type==='address'){
+    const box=el('div','addr-box');
+    const inp=el('input'); inp.id=id; inp.type='text'; inp.value=val; inp.autocomplete='off';
+    inp.setAttribute('autocapitalize','words'); if(f.ph) inp.placeholder=f.ph;
+    const sug=el('div','addr-sug');
+    let tmr=null, lastQ='';
+    const closeSug=()=>{ sug.classList.remove('open'); sug.innerHTML=''; };
+    inp.oninput=()=>{
+      set(f.k,inp.value); $('#edTitle').textContent=current.data.adresse||'Nouvelle visite';
+      const q=inp.value.trim();
+      clearTimeout(tmr);
+      if(q.length<3){ closeSug(); return; }
+      tmr=setTimeout(()=>queryAddr(q),280);
+    };
+    function queryAddr(q){
+      if(q===lastQ) return; lastQ=q;
+      sug.innerHTML='<div class="addr-loading">Recherche…</div>'; sug.classList.add('open');
+      const url='https://api3.geo.admin.ch/rest/services/api/SearchServer'+
+        '?type=locations&origins=address&limit=8&sr=4326&lang=fr&searchText='+encodeURIComponent(q);
+      fetch(url).then(r=>r.json()).then(data=>{
+        const res=(data&&data.results)||[];
+        if(!res.length){ closeSug(); return; }
+        sug.innerHTML='';
+        res.forEach(item=>{
+          const a=item.attrs||{};
+          const text=stripTags(a.label||a.detail||'');
+          const opt=el('div','addr-opt'); opt.textContent=text;
+          opt.onmousedown=e=>e.preventDefault(); // garder le focus avant blur
+          opt.onclick=()=>{
+            inp.value=text; current.data[f.k]=text;
+            queueSave(); updateBadge(SECTIONS.find(s=>s.id==='dossier'));
+            $('#edTitle').textContent=current.data.adresse||'Nouvelle visite';
+            closeSug();
+            if(a.lat!=null && a.lon!=null) detectCanton(a.lat, a.lon);
+          };
+          sug.appendChild(opt);
+        });
+        sug.classList.add('open');
+      }).catch(()=>closeSug());
+    }
+    inp.onblur=()=>setTimeout(closeSug,180);
+    box.appendChild(inp); box.appendChild(sug); w.appendChild(box);
+  } else if(f.type==='textarea'){
+    const ta=el('textarea'); ta.id=id; ta.value=val; if(f.ph) ta.placeholder=f.ph; ta.oninput=()=>set(f.k,ta.value); w.appendChild(ta);
+  } else if(f.type==='select'){
+    const s=el('select'); s.id=id;
+    const o0=el('option'); o0.value=''; o0.textContent='—'; s.appendChild(o0);
+    f.opts.forEach(o=>{const op=el('option'); op.value=o; op.textContent=o; if(o===val)op.selected=true; s.appendChild(op);});
+    s.onchange=()=>{ const old=current.data[f.k]||''; set(f.k,s.value); syncAutofill(f.k,old); }; w.appendChild(s);
+  } else if(f.type==='multi'){
+    const g=el('div','multi-row');
+    f.opts.forEach(o=>{
+      const c=el('button','chip'); c.type='button'; c.textContent=o;
+      const cur0=Array.isArray(current.data[f.k])?current.data[f.k]:[];
+      if(cur0.includes(o)) c.classList.add('sel');
+      c.onclick=()=>{
+        let cur=Array.isArray(current.data[f.k])?current.data[f.k].slice():[];
+        if(cur.includes(o)){ cur=cur.filter(x=>x!==o); c.classList.remove('sel'); }
+        else { cur.push(o); c.classList.add('sel'); }
+        set(f.k,cur);
+      };
+      g.appendChild(c);
+    });
+    w.appendChild(g);
+  } else if(f.type==='choice'){
+    const g=el('div','multi-row');
+    f.opts.forEach(o=>{
+      const c=el('button','chip'); c.type='button'; c.textContent=o;
+      if(current.data[f.k]===o) c.classList.add('sel');
+      c.onclick=()=>{
+        const nv=current.data[f.k]===o?'':o;
+        set(f.k,nv);
+        g.querySelectorAll('.chip').forEach(x=>x.classList.toggle('sel', x.textContent===nv));
+      };
+      g.appendChild(c);
+    });
+    w.appendChild(g);
+  } else if(f.type==='photo'){
+    if(f.note){ const nt=el('div','photo-note '+(f.noteType==='warn'?'warn':'info')); nt.innerHTML=(f.noteType==='warn'?'⚠️ <b>Important.</b> ':'ℹ️ ')+esc(f.note); w.appendChild(nt); }
+    const grp=f.groupe||f.k;
+    w.appendChild(photoControl({
+      orientation:!!f.orientation,
+      list:()=>current.photos.filter(p=>p.groupe===grp),
+      add:(dataUrl)=>current.photos.push({id:uid(),dataUrl,groupe:grp,legende:''}),
+      remove:(id)=>{ current.photos=current.photos.filter(x=>x.id!==id); }
+    }));
+  } else if(f.type==='repeater'){
+    w.appendChild(renderRepeater(f));
+  } else if(f.type==='number'){
+    const inp=el('input'); inp.id=id; inp.type='number'; inp.inputMode='decimal'; inp.min='0'; inp.value=val;
+    inp.oninput=()=>{ set(f.k,inp.value); if(f.controlsLock) applyLocks(); };
+    if(f.unit){ const row=el('div','field-num'); const u=el('input','unit'); u.value=f.unit; u.readOnly=true; u.tabIndex=-1; row.appendChild(inp); row.appendChild(u); w.appendChild(row); }
+    else { w.appendChild(inp); }
+  } else if(f.type==='date'){
+    const inp=el('input'); inp.id=id; inp.type='date'; inp.value=val; inp.oninput=()=>{set(f.k,inp.value); $('#edSub').textContent=inp.value? new Date(inp.value).toLocaleDateString('fr-CH'):'date à définir';}; w.appendChild(inp);
+  } else if(f.type==='computed'){
+    const cv=(f.compute? f.compute(current.data):'')||''; current.data[f.k]=cv;
+    const inp=el('input','computed'); inp.readOnly=true; inp.tabIndex=-1; inp.id='comp_'+f.k; inp.value=cv;
+    if(f.unit){ const row=el('div','field-num'); const u=el('input','unit'); u.value=f.unit; u.readOnly=true; u.tabIndex=-1; row.appendChild(inp); row.appendChild(u); w.appendChild(row); }
+    else w.appendChild(inp);
+  } else if(f.type==='gps'){
+    const row=el('div','gps-row');
+    const fld=el('div','field'); const inp=el('input'); inp.id=id; inp.type='text'; inp.placeholder='lat, long'; inp.value=val; inp.oninput=()=>set(f.k,inp.value); fld.appendChild(inp);
+    const btn=el('button','btn-gps'); btn.textContent='📍 GPS';
+    btn.onclick=()=>{ btn.textContent='…';
+      navigator.geolocation.getCurrentPosition(p=>{
+        inp.value=`${p.coords.latitude.toFixed(5)}, ${p.coords.longitude.toFixed(5)}`; set(f.k,inp.value); btn.textContent='📍 GPS'; toast('Position enregistrée');
+      },()=>{ btn.textContent='📍 GPS'; toast('GPS indisponible'); },{enableHighAccuracy:true,timeout:8000}); };
+    row.appendChild(fld); row.appendChild(btn); w.appendChild(row);
+  } else {
+    const inp=el('input'); inp.id=id; inp.type='text'; inp.value=val; if(f.ph) inp.placeholder=f.ph;
+    inp.oninput=()=>{ set(f.k,inp.value); if(f.k==='adresse') $('#edTitle').textContent=current.data.adresse||'Nouvelle visite'; };
+    w.appendChild(inp);
+  }
+  return w;
+}
+
+/* ---------- Bloc répétable (relevés, listes…) ---------- */
+function renderRepeater(f){ return buildRepeater(f, current.data); }
+function buildRepeater(f, store){
+  const wrap=el('div','rep-wrap');
+  const list=el('div');
+  if(!Array.isArray(store[f.k])) store[f.k]=[];
+  const items=store[f.k];
+  const itemLabel=f.itemLabel||'Élément';
+  function badge(){ const sec=activeSections(current).find(s=>s.fields&&s.fields.includes(f)); if(sec) updateBadge(sec); }
+  function draw(){
+    list.innerHTML='';
+    items.forEach((item,idx)=>{
+      const it=el('div','rep-item');
+      const top=el('div','rep-top');
+      const b=el('b'); b.textContent=`${itemLabel} ${idx+1}`;
+      const del=el('button','icon-btn'); del.textContent='Supprimer';
+      del.onclick=()=>{ const i=items.indexOf(item); if(i>=0) items.splice(i,1); queueSave(); draw(); badge(); };
+      top.appendChild(b); top.appendChild(del); it.appendChild(top);
+      const subEls=[];
+      const refresh=()=>{
+        subEls.forEach(({sf,el:e})=>{
+          if(sf.showWhen) e.style.display = condMet(sf,item)? '' : 'none';
+          if(sf.type==='computed'){ const val=sf.compute? sf.compute(item):''; item[sf.k]=val; const ci=e.querySelector('input[data-comp]'); if(ci) ci.value=val; }
+        });
+      };
+      f.sub.forEach(sf=>{ const e=renderSubField(sf,item,refresh); subEls.push({sf,el:e}); it.appendChild(e); });
+      refresh();
+      list.appendChild(it);
+    });
+  }
+  const add=el('button','add-btn'); add.textContent=`＋ Ajouter ${itemLabel.toLowerCase()}`;
+  add.onclick=()=>{ items.push({id:uid()}); queueSave(); draw(); badge(); };
+  draw(); wrap.appendChild(list); wrap.appendChild(add);
+  return wrap;
+}
+function renderSubField(sf,item,onChange){
+  onChange=onChange||(()=>{});
+  const w=el('div','field');
+  const lab=el('label'); lab.textContent=sf.label; w.appendChild(lab);
+  const val=item[sf.k];
+  if(sf.type==='textarea'){
+    const ta=el('textarea'); ta.value=val||''; if(sf.ph) ta.placeholder=sf.ph; ta.oninput=()=>{ item[sf.k]=ta.value; queueSave(); onChange(); }; w.appendChild(ta);
+  } else if(sf.type==='select'){
+    const s=el('select'); const o0=el('option'); o0.value=''; o0.textContent='—'; s.appendChild(o0);
+    sf.opts.forEach(o=>{ const op=el('option'); op.value=o; op.textContent=o; if(o===val)op.selected=true; s.appendChild(op); });
+    s.onchange=()=>{ item[sf.k]=s.value; queueSave(); onChange(); }; w.appendChild(s);
+  } else if(sf.type==='multi'){
+    const g=el('div','multi-row'); const arr=Array.isArray(val)?val:[];
+    sf.opts.forEach(o=>{ const c=el('button','chip'); c.type='button'; c.textContent=o; if(arr.includes(o))c.classList.add('sel');
+      c.onclick=()=>{ let cur=Array.isArray(item[sf.k])?item[sf.k].slice():[]; if(cur.includes(o)){cur=cur.filter(x=>x!==o);c.classList.remove('sel');}else{cur.push(o);c.classList.add('sel');} item[sf.k]=cur; queueSave(); onChange(); };
+      g.appendChild(c); });
+    w.appendChild(g);
+  } else if(sf.type==='number'){
+    const inp=el('input'); inp.type='number'; inp.inputMode='decimal'; inp.value=val||''; inp.oninput=()=>{ item[sf.k]=inp.value; queueSave(); onChange(); };
+    if(sf.unit){ const row=el('div','field-num'); const u=el('input','unit'); u.value=sf.unit; u.readOnly=true; u.tabIndex=-1; row.appendChild(inp); row.appendChild(u); w.appendChild(row); }
+    else w.appendChild(inp);
+  } else if(sf.type==='computed'){
+    const valc=(sf.compute? sf.compute(item):'')||'';
+    const inp=el('input','computed'); inp.readOnly=true; inp.tabIndex=-1; inp.value=valc; inp.setAttribute('data-comp',sf.k);
+    if(sf.unit){ const row=el('div','field-num'); const u=el('input','unit'); u.value=sf.unit; u.readOnly=true; u.tabIndex=-1; row.appendChild(inp); row.appendChild(u); w.appendChild(row); }
+    else w.appendChild(inp);
+  } else if(sf.type==='photo'){
+    if(!Array.isArray(item[sf.k])) item[sf.k]=[];
+    w.appendChild(photoControl({
+      list:()=>item[sf.k],
+      add:(dataUrl)=>item[sf.k].push({id:uid(),dataUrl,legende:''}),
+      remove:(id)=>{ item[sf.k]=item[sf.k].filter(x=>x.id!==id); }
+    }));
+  } else if(sf.type==='repeater'){
+    w.appendChild(buildRepeater(sf, item));
+  } else {
+    const inp=el('input'); inp.type='text'; inp.value=val||''; if(sf.ph) inp.placeholder=sf.ph; inp.oninput=()=>{ item[sf.k]=inp.value; queueSave(); onChange(); }; w.appendChild(inp);
+  }
+  return w;
+}
+
+/* Galerie de photos avec légende (et orientation optionnelle) sous chaque photo */
+const ORIENTATIONS=['N','NE','E','SE','S','SO','O','NO'];
+function photoControl(opts){
+  const wrap=el('div','photo-list');
+  function draw(){
+    wrap.innerHTML='';
+    opts.list().forEach(p=>{
+      const row=el('div','photo-row');
+      const img=el('img'); img.src=p.dataUrl; row.appendChild(img);
+      const mid=el('div','photo-mid');
+      if(opts.orientation){
+        const sel=el('select','ori'); 
+        const o0=el('option'); o0.value=''; o0.textContent='Orientation…'; sel.appendChild(o0);
+        ORIENTATIONS.forEach(o=>{ const op=el('option'); op.value=o; op.textContent=o; sel.appendChild(op); });
+        sel.value=p.orientation||'';
+        sel.onchange=()=>{ p.orientation=sel.value; queueSave(); };
+        mid.appendChild(sel);
+      }
+      const cap=el('input','cap'); cap.type='text'; cap.placeholder='Remarque sur la photo (facultatif)…'; cap.value=p.legende||'';
+      cap.oninput=()=>{ p.legende=cap.value; queueSave(); }; mid.appendChild(cap);
+      row.appendChild(mid);
+      const del=el('button','del-row'); del.textContent='×'; del.setAttribute('aria-label','Supprimer la photo');
+      del.onclick=()=>{ opts.remove(p.id); queueSave(); draw(); }; row.appendChild(del);
+      wrap.appendChild(row);
+    });
+    const add=el('label','photo-addbtn'); add.innerHTML='<span style="font-size:20px;line-height:1">＋</span> Ajouter une photo';
+    const inp=el('input'); inp.type='file'; inp.accept='image/*'; inp.setAttribute('capture','environment'); inp.multiple=true; inp.style.display='none';
+    inp.onchange=async e=>{ for(const file of e.target.files){ const dataUrl=await compressImage(file); opts.add(dataUrl); } queueSave(); draw(); toast('Photo(s) ajoutée(s)'); };
+    add.appendChild(inp); wrap.appendChild(add);
+  }
+  draw();
+  return wrap;
+}
+
+/* Redimensionnement / compression photo (max 1600px, JPEG 0.7) */
+function compressImage(file){
+  return new Promise(res=>{
+    const r=new FileReader();
+    r.onload=()=>{ const img=new Image(); img.onload=()=>{
+      const max=1600; let {width:w,height:h}=img;
+      if(w>max||h>max){ if(w>h){h=Math.round(h*max/w); w=max;} else {w=Math.round(w*max/h); h=max;} }
+      const cv=document.createElement('canvas'); cv.width=w; cv.height=h;
+      cv.getContext('2d').drawImage(img,0,0,w,h);
+      res(cv.toDataURL('image/jpeg',0.7));
+    }; img.src=r.result; };
+    r.readAsDataURL(file);
+  });
+}
+
+/* ---------- Sauvegarde ---------- */
+function set(k,v){ current.data[k]=v; queueSave(); const sec=activeSections(current).find(s=>s.fields&&s.fields.some(f=>f.k===k)); if(sec)updateBadge(sec); }
+function queueSave(){
+  current.updatedAt=Date.now();
+  $('#saveState').textContent='enregistrement…'; $('#saveState').className='saved dim';
+  updateMissingIndicator();
+  applyConditionals();
+  applyComputed();
+  clearTimeout(saveTimer);
+  saveTimer=setTimeout(async()=>{ await dbPut(current); $('#saveState').textContent='enregistré ✓'; $('#saveState').className='saved'; },500);
+}
+function applyComputed(){
+  activeSections(current).forEach(sec=>sec.fields.forEach(f=>{
+    if(f.type!=='computed'||!f.k) return;
+    const val=(f.compute? f.compute(current.data):'')||'';
+    current.data[f.k]=val;
+    const inp=document.getElementById('comp_'+f.k);
+    if(inp) inp.value=val;
+  }));
+}
+
+/* ---------- Export JSON ---------- */
+function exportJSON(){
+  const blob=new Blob([JSON.stringify(current,null,2)],{type:'application/json'});
+  download(blob, slug(current)+'.json'); toast('JSON exporté');
+}
+function download(blob,name){ const a=el('a'); a.href=URL.createObjectURL(blob); a.download=name; document.body.appendChild(a); a.click(); a.remove(); setTimeout(()=>URL.revokeObjectURL(a.href),2000); }
+
+/* ---------- Export PDF (vue print) ---------- */
+function buildPrint(){
+  const v=current, d=v.data;
+  const row=(k,val)=>val? `<tr><td class="k">${esc(k)}</td><td>${esc(val)}</td></tr>`:'';
+  const tlabels=(v.types||[]).map(tk=>{ const t=TYPES.find(x=>x.k===tk); return t?t.label:''; }).filter(Boolean).join(' + ');
+  let h=`<h1>Rapport de visite${tlabels?' — '+esc(tlabels):''}</h1>
+    <div class="pmeta">${esc(d.adresse||'')} · ${d.dateVisite? new Date(d.dateVisite).toLocaleDateString('fr-CH'):'—'}${d.collaborateur?' · '+esc(d.collaborateur):''}</div>`;
+  activeSections(v).forEach(sec=>{
+    let rows='';
+    sec.fields.forEach(f=>{
+      if(f.type==='subheader'){ rows+=`<tr><td colspan="2" style="padding-top:8px"><b>${esc(f.label)}</b></td></tr>`; return; }
+      if(f.type==='photo'||f.type==='repeater') return;
+      if(!condMet(f,d)) return;
+      const val=d[f.k];
+      if(f.type==='multi'){ if(Array.isArray(val)&&val.length) rows+=row(f.label, val.join(', ')); return; }
+      if(isFilled(val)){ const u=(f.type==='number'&&f.unit)?` ${f.unit}`:''; rows+=row(f.label, val+u); }
+    });
+    if(rows) h+=`<h2>${esc(sec.titre)}</h2><table>${rows}</table>`;
+    sec.fields.filter(f=>f.type==='photo'&&condMet(f,d)).forEach(f=>{
+      const grp=f.groupe||f.k;
+      const ph=v.photos.filter(p=>p.groupe===grp);
+      if(ph.length) h+=`<h2>${esc(f.label)} (${ph.length})</h2>`+ph.map((p,i)=>printPhoto(p, esc(f.label)+' '+(i+1))).join('');
+    });
+    sec.fields.filter(f=>f.type==='repeater'&&condMet(f,d)).forEach(f=>{
+      const items=d[f.k]; if(Array.isArray(items)&&items.length) h+=printRepeater(f, items);
+    });
+  });
+  $('#printRoot').innerHTML=h;
+}
+function printPhoto(p, fallback){
+  const cap = p.legende && p.legende.trim() ? esc(p.legende) : esc(fallback||'');
+  const ori = p.orientation ? '<b>'+esc(p.orientation)+'</b>'+(cap?' — ':'') : '';
+  return `<span class="pimg"><img src="${p.dataUrl}">${(ori||cap)?`<span>${ori}${cap}</span>`:''}</span>`;
+}
+function printRepeater(f, items){
+  let h=`<h2>${esc(f.label)} (${items.length})</h2>`;
+  items.forEach((item,idx)=>{
+    let irows='', extra='';
+    f.sub.forEach(sf=>{
+      if(sf.type==='repeater'){ const sub=item[sf.k]; if(Array.isArray(sub)&&sub.length) extra+=printRepeater(sf, sub); return; }
+      if(sf.type==='photo'){ const ph=item[sf.k]; if(Array.isArray(ph)&&ph.length) extra+=`<div style="margin:4px 0">${ph.map((p,i)=>printPhoto(p, esc(sf.label)+' '+(i+1))).join('')}</div>`; return; }
+      if(!condMet(sf,item)) return;
+      const v2=item[sf.k];
+      if(sf.type==='multi'){ if(Array.isArray(v2)&&v2.length) irows+=`<tr><td class="k">${esc(sf.label)}</td><td>${esc(v2.join(', '))}</td></tr>`; return; }
+      if(isFilled(v2)){ const u=((sf.type==='number'||sf.type==='computed')&&sf.unit)?` ${sf.unit}`:''; irows+=`<tr><td class="k">${esc(sf.label)}</td><td>${esc(v2)}${u}</td></tr>`; }
+    });
+    h+=`<div class="pconstat"><b>${esc(f.itemLabel||'Élément')} ${idx+1}</b>${irows?`<table>${irows}</table>`:''}${extra}</div>`;
+  });
+  return h;
+}
+function exportPDF(){ if(missingRequired().length){ showMissingModal(true); return; } doExport(); }
+function doExport(){ buildPrint(); toast('Préparez l’impression → « Enregistrer en PDF »'); setTimeout(()=>window.print(),350); }
+
+/* ---------- Utils ---------- */
+function esc(s){ return String(s==null?'':s).replace(/[&<>"]/g,c=>({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;'}[c])); }
+function stripTags(s){ return String(s||'').replace(/<\/?[^>]+>/g,'').replace(/&amp;/g,'&').replace(/&nbsp;/g,' ').replace(/\s+/g,' ').trim(); }
+function slug(v){ const base=(v.data.adresse||'visite').toLowerCase().replace(/[^a-z0-9]+/g,'-').replace(/^-|-$/g,''); return 'Visite_'+base; }
+let toastTimer=null;
+function toast(msg){ const t=$('#toast'); t.textContent=msg; t.classList.add('show'); clearTimeout(toastTimer); toastTimer=setTimeout(()=>t.classList.remove('show'),2200); }
+
+/* ---------- Events ---------- */
+$('#newBtn').onclick=()=>{ const v=newVisit(); dbPut(v); showEditor(v); };
+$('#backBtn').onclick=showHome;
+$('#searchInput').oninput=applyFilter;
+$('#jsonBtn').onclick=exportJSON;
+$('#pdfBtn').onclick=exportPDF;
+$('#deleteBtn').onclick=async()=>{ if(confirm('Supprimer définitivement cette visite ?')){ await dbDel(current.id); toast('Visite supprimée'); showHome(); } };
+
+/* ---------- Boot ---------- */
+(async function init(){
+  try{ await db(); }catch(e){ alert('Stockage local indisponible. Ouvrez ce fichier dans Safari/Chrome (pas en aperçu intégré).'); }
+  showHome();
+})();
+</script>
+</body>
+</html>
